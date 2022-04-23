@@ -60,7 +60,9 @@ jobs:
         id: branch_check
         run: |
           echo "Running on branch ${{ github.ref }}"
-          if [ "${{ github.ref }}" = "refs/heads/master" ]; then
+          if [ inputs.env_name != null ]; then
+            echo "::set-output name=env_name::${{ inputs.env_name }}"
+          elif [ "${{ github.ref }}" = "refs/heads/master" ]; then
             echo "::set-output name=env_name::${{ inputs.dev_env_name }}"
           elif [ "${{ github.ref }}" = "refs/heads/production" ]; then
             echo "::set-output name=env_name::prod"
@@ -69,14 +71,16 @@ jobs:
           else
               echo "::set-output name=env_name::${{ inputs.dev_env_name }}"
           fi
-      - name: run step if environment passed as input
-        if: ${{ inputs.env_name != null }}
-        run: |
-          echo "Setting passed environment as env for deploy"
-          echo "::set-output name=env_name::${{ inputs.env_name }}"
+      - uses: actions/cache@v3
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-gems-${{ hashFiles('**/Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-gems-
       - name: Build
         run: |
           apt-get update && apt-get install libicu-dev libsnappy-dev zip -y
+          bundle config path vendor/bundle
           bundle install --jobs 4 --retry 3
       - name: Setup Code Climate test-reporter
         run: |
@@ -104,7 +108,7 @@ jobs:
           name: deployment-artifact
           path: package.zip
     outputs:
-      env_name: ${{ inputs.dev_env_name }}
+      env_name: ${{ steps.branch_check.outputs.env_name }}
   release:
     runs-on: ubuntu-latest
     needs: [build]
