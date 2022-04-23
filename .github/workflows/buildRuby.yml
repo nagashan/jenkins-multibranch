@@ -60,7 +60,7 @@ jobs:
         id: branch_check
         run: |
           echo "Running on branch ${{ github.ref }}"
-          if [ inputs.env_name != null ]; then
+          if [ ${{ inputs.env_name }} != null && ${{ inputs.env_name }} != '' ]; then
             echo "::set-output name=env_name::${{ inputs.env_name }}"
           elif [ "${{ github.ref }}" = "refs/heads/master" ]; then
             echo "::set-output name=env_name::${{ inputs.dev_env_name }}"
@@ -71,6 +71,7 @@ jobs:
           else
               echo "::set-output name=env_name::${{ inputs.dev_env_name }}"
           fi
+          echo "EnvName ${{ steps.branch_check.outputs.env_name }}"
       - uses: actions/cache@v3
         with:
           path: vendor/bundle
