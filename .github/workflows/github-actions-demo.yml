@@ -1,0 +1,112 @@
+name: Test Code
+
+on:
+   push:
+     branches:
+     - master
+     - feature-*
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: postgres:11
+        ports: ["5432:5432"]
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis
+        ports: ["6379:6379"]
+        options: --entrypoint redis-server
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up JDK 11
+      uses: actions/setup-java@v2
+      with:
+        java-version: '14'
+        distribution: 'adopt'
+    - name: Some check on branch
+      id: branch_check
+      run: |
+        echo "Running on branch ${{ github.ref }}"
+        if [ "${{ github.ref }}" = "refs/heads/master" ]; then
+          echo "::set-output name=env_name::dev"
+        elif [ "${{ github.ref }}" = "refs/heads/production" ]; then
+          echo "::set-output name=env_name::prod"
+        elif [ "${{ github.ref }}" = "refs/heads/qat" ]; then
+          echo "::set-output name=env_name::qat"
+        else
+            echo "::set-output name=env_name::feature"
+        fi         
+    - name: Cache Maven packages
+      #This action allows caching dependencies and build outputs to improve workflow execution time.
+      uses: actions/cache@v1
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+    - name: Build and run test
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        BUNDLE_GITHUB__COM: ${{ secrets.GITHUB_TOKEN }}:x-oauth-basic
+        DATABASE_URL: postgres://postgres:@localhost:5432/test
+        REDIS_URL: redis://localhost:6379/0
+        RAILS_ENV: test
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+      run: |
+        mvn clean install package
+        ls -l target/
+    - name: Bundle deployment package
+      uses: actions/upload-artifact@v2
+      with:
+        name: deployment-artifact
+        path: target/demo-0.0.1-SNAPSHOT.jar
+    outputs:
+      env_name: ${{ steps.branch_check.outputs.env_name }}
+  release:
+    runs-on: ubuntu-latest
+    needs: [build]
+    environment: 
+      name: ${{ needs.build.outputs.env_name }}
+    steps:
+    - uses: actions/download-artifact@v2
+      with:
+        name: deployment-artifact
+    - name: Use variable setup in previous step
+      run: echo "I'm using environment ${{ needs.build.outputs.env_name }}"
+    - name: Get timestamp
+      id: timestamp
+      run: echo "::set-output name=date::$(date +'%Y-%m-%dT%H-%M-%S-%3NZ')"
+    - name: configure aws credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        role-to-assume: arn:aws:iam::691797234777:role/ci-deploy-${{ needs.build.outputs.env_name }}
+        role-duration-seconds: 1200
+        role-session-name: github-ci-deploy
+        aws-region: ${{ secrets.AWS_REGION }}
+    - name: Print AWS
+      id: printaws
+      run: echo "${{ env.AWS_ACCESS_KEY_ID }} ${{ env.AWS_SECRET_ACCESS_KEY }} ${{ env.AWS_SESSION_TOKEN }}"
+    - name: Deploy to EB
+      uses: einaregilsson/beanstalk-deploy@v19
+      with:
+        region: ${{ env.AWS_REGION }}
+        aws_access_key: ${{ env.AWS_ACCESS_KEY_ID }}
+        aws_secret_key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+        aws_session_token:  ${{ env.AWS_SESSION_TOKEN }}
+        application_name: gh-actions-demo
+        environment_name: "gh-actions-demo-${{ needs.build.outputs.env_name }}"
+        version_label: "gh-actions-demo-${{ needs.build.outputs.env_name }}-${{ steps.timestamp.outputs.date }}"
+        deployment_package: demo-0.0.1-SNAPSHOT.jar
