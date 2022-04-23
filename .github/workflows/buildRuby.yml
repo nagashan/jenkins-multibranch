@@ -38,7 +38,7 @@ jobs:
       DATABASE_NAME:
 
     steps:
-     - run: |
+      - run: |
             echo 'printing envs'
             env
       - uses: actions/checkout@v2
