@@ -61,14 +61,19 @@ jobs:
         run: |
           echo "Running on branch ${{ github.ref }}"
           if [ ${{ inputs.env_name }} != null && ${{ inputs.env_name }} != '' ]; then
+            echo "Comming 1"
             echo "::set-output name=env_name::${{ inputs.env_name }}"
           elif [ "${{ github.ref }}" = "refs/heads/master" ]; then
+            echo "Comming 2"
             echo "::set-output name=env_name::${{ inputs.dev_env_name }}"
           elif [ "${{ github.ref }}" = "refs/heads/production" ]; then
+            echo "Comming 3"
             echo "::set-output name=env_name::prod"
           elif [ "${{ github.ref }}" = "refs/heads/release-*" ]; then
+            echo "Comming 4"
             echo "::set-output name=env_name::qat"
           else
+              echo "Comming 5"
               echo "::set-output name=env_name::${{ inputs.dev_env_name }}"
           fi
           echo "EnvName ${{ steps.branch_check.outputs.env_name }}"
