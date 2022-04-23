@@ -29,6 +29,7 @@ on:
 env:
   GITHUB_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
   BUNDLE_GITHUB__COM: ${{ secrets.CI_GITHUB_TOKEN }}:x-oauth-basic
+  AWS_REGION: us-east-1
 
 jobs:
   build:
@@ -48,13 +49,7 @@ jobs:
       DISABLE_SPRING: 1
       DATABASE_HOST:
       DATABASE_NAME:
-
     steps:
-      - run: |
-            echo 'printing envs'
-            echo "${{ secrets.CI_GITHUB_TOKEN }}"
-            echo "${{ env.environName }}"
-            env
       - uses: actions/checkout@v2
         with:
           submodules: recursive
@@ -120,13 +115,8 @@ jobs:
         with:
           name: deployment-artifact
       - name: Set Environment Name
-        if: ${{ github.event_name == 'push' }}
         run: |
           echo "ENV_NAME=${{ needs.build.outputs.env_name }}" >> $GITHUB_ENV
-      - name: Set Environment Name
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: |
-          echo "ENV_NAME=${{ github.event.inputs.envName }}" >> $GITHUB_ENV
       - name: Get timestamp
         id: timestamp
         run: |
