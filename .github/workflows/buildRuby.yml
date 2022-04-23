@@ -75,7 +75,7 @@ jobs:
               echo "::set-output name=env_name::${{ inputs.dev_env_name }}"
           fi
       - name: run step if environment passed as input
-        if: ${{ inputs.env_name != "" }}
+        if: ${{ inputs.env_name != null }}
         run: |
           echo "Setting passed environment as env for deploy"
           echo "::set-output name=env_name::${{ inputs.env_name }}"
