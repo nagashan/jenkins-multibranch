@@ -155,8 +155,8 @@ jobs:
           aws_access_key: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
           aws_secret_key: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
           region: ${{ env.AWS_REGION }}
-          application_name: $${{ inputs.app_id }}
-          environment_name: "$${{ inputs.app_id }}-${{ env.ENV_NAME }}"
+          application_name: ${{ inputs.app_id }}
+          environment_name: "${{ inputs.app_id }}-${{ env.ENV_NAME }}"
           version_label: "${{ inputs.app_id }}-${{ env.ENV_NAME }}-${{ steps.timestamp.outputs.date }}-${{ steps.short-sha.outputs.sha }}"
           version_description: ${{ github.event.head_commit.message }}
           deployment_package: package.zip
