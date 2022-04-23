@@ -121,6 +121,7 @@ jobs:
           name: deployment-artifact
       - name: Set Environment Name
         run: |
+          echo "Build EnvName ${{ needs.build.outputs.env_name }}"
           echo "ENV_NAME=${{ needs.build.outputs.env_name }}" >> $GITHUB_ENV
       - name: Get timestamp
         id: timestamp
