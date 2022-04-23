@@ -32,6 +32,8 @@ jobs:
     steps:
       - run: |
             echo 'printing envs'
+            echo "${{ secrets.GITHUB_TOKEN }}"
+            echo "${{ github.token }}"
             env
       - uses: actions/checkout@v2
         with:
