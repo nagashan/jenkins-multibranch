@@ -38,6 +38,9 @@ jobs:
       DATABASE_NAME:
 
     steps:
+     - run: |
+            echo 'printing envs'
+            env
       - uses: actions/checkout@v2
         with:
           submodules: recursive
