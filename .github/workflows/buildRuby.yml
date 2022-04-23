@@ -9,6 +9,24 @@ on:
       app_id:
         required: true
         type: string
+    secrets:
+      CI_GITHUB_TOKEN:
+        required: true
+      CC_TEST_REPORTER_ID:
+        required: true
+      NON_PROD_AWS_ACCESS_KEY_ID:
+        required: true
+      NON_PROD_AWS_SECRET_ACCESS_KEY:
+        required: true
+      PROD_AWS_ACCESS_KEY_ID:
+        required: true
+      PROD_AWS_SECRET_ACCESS_KEY:
+        required: true
+
+env:
+  GITHUB_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
+  BUNDLE_GITHUB__COM: ${{ secrets.CI_GITHUB_TOKEN }}:x-oauth-basic
+  FOURKITES_APP_ID: 'ltl-worker'
 
 jobs:
   build:
@@ -33,7 +51,7 @@ jobs:
       - run: |
             echo 'printing envs'
             echo "${{ secrets.CI_GITHUB_TOKEN }}"
-            echo "${{ github.token }}"
+            echo "${{ env.environName }}"
             env
       - uses: actions/checkout@v2
         with:
