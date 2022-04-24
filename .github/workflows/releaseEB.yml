@@ -1,0 +1,92 @@
+name: Build and Release
+
+on:
+  workflow_call:
+    inputs:
+      dev_env_name:
+        required: true
+        type: string
+      app_id:
+        required: true
+        type: string
+      env_name:
+        required: false
+        type: string
+    secrets:
+      NON_PROD_AWS_ACCESS_KEY_ID:
+        required: true
+      NON_PROD_AWS_SECRET_ACCESS_KEY:
+        required: true
+      PROD_AWS_ACCESS_KEY_ID:
+        required: true
+      PROD_AWS_SECRET_ACCESS_KEY:
+        required: true
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  releaseEB:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: false
+      - name: Identify environment
+        id: branch_check
+        run: |
+          echo "Running on branch ${{ github.ref }}"
+          if [ ${{ inputs.env_name }} != null && ${{ inputs.env_name }} != '' ]; then
+            echo "Setting branch from input passed ${{ inputs.env_name }}"
+            echo "::set-output name=env_name::${{ inputs.env_name }}"
+          elif [ "${{ github.ref }}" = "refs/heads/master" ]; then
+            echo "Setting branch from master ${{ inputs.dev_env_name }}"
+            echo "::set-output name=env_name::${{ inputs.dev_env_name }}"
+          elif [ "${{ github.ref }}" = "refs/heads/production" ]; then
+            echo "Setting branch from production branch"
+            echo "::set-output name=env_name::prod"
+          elif [ "${{ github.ref }}" = "refs/heads/release-*" ]; then
+            echo "Setting branch from release branch"
+            echo "::set-output name=env_name::qat"
+          else
+              echo "::set-output name=env_name::${{ inputs.dev_env_name }}"
+          fi
+      - name: Set Environment Name
+        run: |
+          echo "Build EnvName ${{ steps.branch_check.outputs.env_name }}"
+          echo "ENV_NAME=${{ steps.branch_check.outputs.env_name }}" >> $GITHUB_ENV
+      - name: Get timestamp
+        id: timestamp
+        run: |
+          echo "::set-output name=date::$(date +'%Y_%m_%d_%T:%H:%M:%S.%3NZ')"
+      - uses: benjlevesque/short-sha@v1.2
+        id: short-sha
+        with:
+          length: 8
+      - name: Deploy to EB ${{ env.ENV_NAME }}
+        id: aws-non-prod-eb-deployment
+        if: ${{ steps.branch_check.outputs.env_name == 'qat' }}
+        uses: einaregilsson/beanstalk-deploy@v20
+        with:
+          aws_access_key: ${{ secrets.NON_PROD_AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.NON_PROD_AWS_SECRET_ACCESS_KEY }}
+          region: ${{ secrets.AWS_REGION }}
+          application_name: ${{ inputs.app_id }}
+          environment_name: "$${{ inputs.app_id }}-${{ env.ENV_NAME }}"
+          version_label: "$${{ inputs.app_id }}-${{ env.ENV_NAME }}-${{ steps.timestamp.outputs.date }}-${{ steps.short-sha.outputs.sha }}"
+          version_description: ${{ github.event.head_commit.message }}
+          deployment_package: package.zip
+      - name: Deploy to EB ${{ env.ENV_NAME }}
+        id: aws-prod-eb-deployment
+        if: ${{ steps.branch_check.outputs.env_name != 'qat' }}
+        uses: einaregilsson/beanstalk-deploy@v20
+        with:
+          aws_access_key: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
+          region: ${{ env.AWS_REGION }}
+          application_name: ${{ inputs.app_id }}
+          environment_name: "${{ inputs.app_id }}-${{ env.ENV_NAME }}"
+          version_label: "${{ inputs.app_id }}-${{ env.ENV_NAME }}-${{ steps.timestamp.outputs.date }}-${{ steps.short-sha.outputs.sha }}"
+          version_description: ${{ github.event.head_commit.message }}
+          deployment_package: package.zip
