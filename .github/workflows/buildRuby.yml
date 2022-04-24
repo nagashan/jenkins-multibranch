@@ -12,7 +12,7 @@ env:
   BUNDLE_GITHUB__COM: ${{ secrets.CI_GITHUB_TOKEN }}:x-oauth-basic
 
 jobs:
-  build:
+  buildRuby:
     runs-on: ubuntu-latest
     container: ruby:2.5
     env:

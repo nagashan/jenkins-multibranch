@@ -62,6 +62,9 @@ jobs:
         id: short-sha
         with:
           length: 8
+      - name: Bundle deployment package
+        run: |
+          zip -r package.zip . -x ".git/*" -x ".github/*" -x ".vscode/*" -x "vendor/*"
       - name: Deploy to EB ${{ env.ENV_NAME }}
         id: aws-non-prod-eb-deployment
         if: ${{ steps.branch_check.outputs.env_name == 'qat' }}
