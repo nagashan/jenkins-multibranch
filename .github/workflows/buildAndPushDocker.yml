@@ -36,7 +36,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3
         with:
-          images: name/${{ inputs.app_id }}
+          images: ${{ secrets.AZURE_REGISTRY_SERVER }/${{ inputs.app_id }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
