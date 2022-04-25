@@ -6,6 +6,13 @@ on:
       app_id:
         required: true
         type: string
+    secrets:
+      AZURE_REGISTRY_SERVER:
+        required: true
+      AZURE_REGISTRY_USERNAME:
+        required: true
+      AZURE_REGISTRY_PASSWORD:
+        required: true
 jobs:
   buildAndPushDocker:
     runs-on: ubuntu-latest
